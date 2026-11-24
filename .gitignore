@@ -1,0 +1,26 @@
+# Dependencies and builds
+node_modules/
+dist/
+.next/
+coverage/
+*.tsbuildinfo
+
+# Secrets: never commit (I3). Only the examples are tracked.
+.env*
+!.env.example
+info/
+
+# Local data, kept out of git (I1): the copied uploads and the import dump
+api/uploads/
+scripts/import/data/
+
+# Supabase CLI state
+supabase/.temp/
+supabase/.branches/
+
+# Personal tool settings
+.claude/settings.local.json
+**/.claude/settings.local.json
+
+# OS
+.DS_Store

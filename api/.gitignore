@@ -1,0 +1,31 @@
+# Dependencies and build output
+/node_modules
+/admin/node_modules
+/dist
+/admin/dist
+*.tsbuildinfo
+
+# Tests
+/coverage
+
+# Environment files: local secrets. Only the template is committed.
+.env*
+!.env.example
+# The production settings (deploy/README.md) live on the VPS only.
+*.env
+!*.env.example
+
+# Logs
+*.log
+
+# OS and editors
+.DS_Store
+/.idea
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+
+# Uploaded images (UPLOADS_DIR)
+/uploads

@@ -1,0 +1,30 @@
+# Hestia proxy template (HTTPS) for simplefood.kozyr.info: the Next.js site,
+# with all its paths, its own /api/auth/* routes included. The API has its
+# own domain (simplefood-api-nest-proxy). See README.md.
+server {
+    listen      %ip%:%proxy_ssl_port% ssl;
+    server_name %domain_idn% %alias_idn%;
+
+    ssl_certificate     %ssl_pem%;
+    ssl_certificate_key %ssl_key%;
+
+    location / {
+        proxy_pass http://127.0.0.1:3000;
+
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "upgrade";
+
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+
+    # Image links from Strapi's days: the same files, now on the API's domain.
+    location /uploads/ {
+        return 301 https://api-simplefood.kozyr.info$request_uri;
+    }
+
+    include %home%/%user%/conf/web/%domain%/nginx.ssl.conf_*;
+}

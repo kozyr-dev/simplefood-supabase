@@ -1,0 +1,27 @@
+# Allow-list: ignore everything, then re-include only what the image build
+# needs. New files (secrets, dumps, logs) are excluded by default, so they can
+# never reach the build context or an image layer, even by accident.
+*
+
+# Dependencies (installed inside the image with `npm ci`)
+!package.json
+!package-lock.json
+
+# Sources and build config (`nest build` runs inside the image)
+!src/
+!nest-cli.json
+!tsconfig.json
+!tsconfig.build.json
+
+# The admin app, built inside the image too (never its node_modules or dist)
+!admin/package.json
+!admin/package-lock.json
+!admin/index.html
+!admin/tsconfig.json
+!admin/vite.config.ts
+!admin/public/
+!admin/src/
+
+# Not needed to build or run the app; CI runs the tests.
+src/**/*.spec.ts
+admin/src/**/*.test.ts

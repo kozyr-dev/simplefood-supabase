@@ -1,0 +1,32 @@
+# Hestia proxy template (HTTPS) for api-simplefood.kozyr.info: the API in
+# Docker (deploy/compose.yaml), which also serves /admin and /uploads.
+# Installed in /usr/local/hestia/data/templates/web/nginx/; see README.md.
+server {
+    listen      %ip%:%proxy_ssl_port% ssl;
+    server_name %domain_idn% %alias_idn%;
+
+    ssl_certificate     %ssl_pem%;
+    ssl_certificate_key %ssl_key%;
+
+    # Uploads are up to 10 MB, refused by the API itself with its JSON error;
+    # the extra megabyte is the multipart form around the file.
+    client_max_body_size 11m;
+
+    location / {
+        proxy_pass http://127.0.0.1:1339;
+        proxy_http_version 1.1;
+        proxy_set_header Connection "";
+
+        # The admin's sign-in compares Origin with Host (CROSS_ORIGIN_REQUEST).
+        proxy_set_header Host $host;
+        # Replaced, not appended: the API reads the client one hop back
+        # (TRUST_PROXY_HOPS=1), and a client's own header is never passed on.
+        proxy_set_header X-Forwarded-For $remote_addr;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+
+    include %home%/%user%/conf/web/%domain%/nginx.ssl.conf_*;
+
+    error_log  /var/log/nginx/%domain%.error.log;
+    access_log /var/log/nginx/%domain%.log;
+}

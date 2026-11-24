@@ -1,0 +1,95 @@
+# Production on the VPS: Postgres and the API, from the image CI publishes.
+# Lives in /opt/simplefood-api with deploy.sh and two files that never go to git:
+#   .env      for Compose itself: POSTGRES_PASSWORD, and API_IMAGE (deploy.sh writes it)
+#   api.env   the API's settings (api.env.example lists them)
+# Setup and everyday commands: deploy/README.md. (Local development uses
+# ../docker-compose.yml instead.)
+name: simplefood-api
+
+# Docker keeps container logs forever by default: rotate them.
+x-logging: &logging
+  driver: json-file
+  options:
+    max-size: 10m
+    max-file: '5'
+
+# The API's container, shared by the long-running `api`, the one-off
+# `migrate`, and `docker compose run --rm api <command>` (staff accounts, the import).
+x-api: &api
+  image: '${API_IMAGE:?API_IMAGE is unset, deploy.sh writes it to .env}'
+  init: true
+  env_file:
+    # raw: values exactly as written, no $ substitution (passwords may have one).
+    - path: api.env
+      format: raw
+  # The database settings are fixed by this file; api.env doesn't repeat them.
+  environment:
+    DB_HOST: postgres
+    DB_PORT: 5432
+    DB_USER: simplefood
+    DB_NAME: simplefood
+    DB_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is unset in .env}
+  volumes:
+    - uploads:/app/uploads
+  depends_on:
+    postgres:
+      condition: service_healthy
+  logging: *logging
+
+services:
+  postgres:
+    # Pinned like the API's Node image; Dependabot proposes the bumps.
+    image: postgres:18.7-alpine3.24
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: simplefood
+      POSTGRES_DB: simplefood
+      # Read only when the volume is empty (the first start).
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is unset in .env}
+    volumes:
+      # Postgres 18+ keeps its data in a versioned subfolder: mount the parent.
+      - postgres-data:/var/lib/postgresql
+    # No ports: only containers of this project reach it.
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U simplefood -d simplefood']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+      start_interval: 1s
+    deploy:
+      resources:
+        limits:
+          memory: 512m
+    logging: *logging
+
+  api:
+    <<: *api
+    restart: unless-stopped
+    ports:
+      # Localhost only: nginx and the website's server reach it there. Docker's
+      # port rules go around the host firewall, so never publish it wider.
+      - '127.0.0.1:${API_PORT:-1339}:1339'
+    deploy:
+      resources:
+        limits:
+          # sharp needs room for a 40-megapixel upload.
+          memory: 768m
+
+  # docker compose run --rm migrate (deploy.sh runs it before each new API).
+  migrate:
+    <<: *api
+    profiles: [tools]
+    command:
+      [
+        'node',
+        'node_modules/typeorm/cli.js',
+        'migration:run',
+        '-d',
+        'dist/database/data-source.js',
+      ]
+
+volumes:
+  postgres-data:
+  # A new volume takes the image's /app/uploads owner (node).
+  uploads:

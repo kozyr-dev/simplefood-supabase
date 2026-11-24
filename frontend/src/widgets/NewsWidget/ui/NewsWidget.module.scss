@@ -1,0 +1,16 @@
+.news-slider {
+  margin: 0 -15px;
+  margin-bottom: 50px;
+}
+.news-slider__slide {
+  padding: 15px;
+}
+
+.news-list {
+  &__el {
+    margin-bottom: 40px;
+    &:last-child {
+      margin-bottom: 0;
+    }
+  }
+}

@@ -1,0 +1,36 @@
+# Local development infrastructure.
+# The API itself runs on the host (`npm run start:dev`); production uses deploy/compose.yaml.
+# All values come from .env (see .env.example); there are no defaults on purpose,
+# so a missing variable stops `docker compose` with a clear error.
+name: simplefood
+
+services:
+  postgres:
+    image: postgres:18-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:?POSTGRES_USER is required}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD is required}
+      POSTGRES_DB: ${POSTGRES_DB:?POSTGRES_DB is required}
+    ports:
+      # Bound to localhost only, so the DB is never exposed on the network.
+      - '127.0.0.1:${POSTGRES_PORT:?POSTGRES_PORT is required}:5432'
+    volumes:
+      # Postgres 18+ keeps data in a versioned subdirectory, so mount the parent dir.
+      - postgres18-data:/var/lib/postgresql
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}']
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  mailpit:
+    # Catches all outgoing email in dev. Web UI on MAILPIT_UI_PORT (8025 in .env.example).
+    image: axllent/mailpit:v1.21
+    restart: unless-stopped
+    ports:
+      - '127.0.0.1:${MAILPIT_SMTP_PORT:?MAILPIT_SMTP_PORT is required}:1025'
+      - '127.0.0.1:${MAILPIT_UI_PORT:?MAILPIT_UI_PORT is required}:8025'
+
+volumes:
+  postgres18-data:
